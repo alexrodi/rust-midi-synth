@@ -98,6 +98,17 @@ fn main() {
     }
 }
 
+fn remove_debug_content(mut string: String) -> String {
+    let mut found_bracket = false;
+    string.retain(|c| 
+        !found_bracket && {
+            found_bracket = c == '{' || c == '(';
+            c != '}' && c != ')' && !found_bracket
+        }
+    );
+    string
+}
+
 fn run() -> Result<(), Box<dyn Error>> {
 
     //=======
@@ -163,13 +174,14 @@ fn run() -> Result<(), Box<dyn Error>> {
             println!("Context: {:#?}\n", context);
             println!("Message: {:#?}\n", MidiMessage::new(message));
 
-            let message = MidiMessage::new(message)
-            .unwrap_or_else(|err| eprintln!("{}", err));
-
-            if let MidiMessage::NoteOn(note) = message {
-                let mut context = context.lock(1).unwrap(); // Lock mutex with reduced priority
-                context.frequency(note.frequency());
-                context.gain(note.gain());
+            match MidiMessage::new(message) {
+                Ok(MidiMessage::NoteOn(note)) => {
+                    let mut context = context.lock(1).unwrap(); // Lock mutex with reduced priority
+                    context.frequency(note.frequency());
+                    context.gain(note.gain());
+                },
+                Ok(message) => println!("Were're still working on {}!", remove_debug_content(format!("{:?}", message))),
+                Err(err) => eprintln!("{}", err)
             }
         },
         synth_clone
