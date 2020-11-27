@@ -1,0 +1,11 @@
+[package]
+authors = ["alexrodi <alexandre_rodi_1993@hotmail.com>"]
+edition = "2018"
+name = "rust-synth"
+version = "0.1.0"
+
+[dependencies]
+cpal = "0.13.1"
+midir = "0.7.0"
+priomutex = "0.3.1"
+
