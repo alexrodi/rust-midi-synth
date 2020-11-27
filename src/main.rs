@@ -4,6 +4,8 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::Arc;
 use priomutex::spin_one::Mutex;
 
+const DEBUG: bool = false;
+
 #[derive(Debug)]
 struct Synth {
     frequency: f32,
@@ -168,12 +170,13 @@ fn run() -> Result<(), Box<dyn Error>> {
         port,
         &port_name,
         |micros, message, context| {
-            println!("=============================\n");
-            println!("Microseconds: {}\n", micros);
-            println!("Raw Message: {:?}\n", message);
-            println!("Context: {:#?}\n", context);
-            println!("Message: {:#?}\n", MidiMessage::new(message));
-
+            if DEBUG {
+                println!("=============================\n");
+                println!("Microseconds: {}\n", micros);
+                println!("Raw Message: {:?}\n", message);
+                println!("Context: {:#?}\n", context);
+                println!("Message: {:#?}\n", MidiMessage::new(message));
+            }
             match MidiMessage::new(message) {
                 Ok(MidiMessage::NoteOn(note)) => {
                     let mut context = context.lock(1).unwrap(); // Lock mutex with reduced priority
