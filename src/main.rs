@@ -105,7 +105,7 @@ fn remove_debug_content(mut string: String) -> String {
     string.retain(|c| 
         !found_bracket && {
             found_bracket = c == '{' || c == '(';
-            c != '}' && c != ')' && !found_bracket
+            !found_bracket
         }
     );
     string
