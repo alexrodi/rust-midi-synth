@@ -60,7 +60,9 @@ fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// A little utility for retaining the struct name from a debug format
+/// Small utility for retaining the struct name from a debug format.
+/// - Disposes of all content and brackets or parenthesis
+/// 
 /// # Usage
 /// ```
 /// #[derive(Debug)]
@@ -75,12 +77,9 @@ fn run() -> Result<(), Box<dyn Error>> {
 /// debug_struct_name(format!("{:?}", b)); // = "AnAwesomeStruct"
 /// ```
 fn debug_struct_name(mut string: String) -> String {
-    let mut found_bracket = false;
-    string.retain(|c| 
-        !found_bracket && {
-            found_bracket = c == '{' || c == '(';
-            !found_bracket
-        }
-    );
+    let found_bracket = string.find(|c| c == '{' || c == '(');
+    if let Some(index) = found_bracket {
+        string = string.split_at(index).0.to_string();
+    }
     string
 }
