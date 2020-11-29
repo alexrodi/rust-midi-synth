@@ -25,7 +25,7 @@ pub enum MidiMessage {
 }
 
 impl MidiMessage {
-    pub fn new(raw_message: &[u8]) -> Result<Self, &str> {
+    pub fn try_new(raw_message: &[u8]) -> Result<Self, &str> {
         let channel = raw_message[0] & 0b00001111;
         let status = raw_message[0] >> 4;
 
@@ -64,7 +64,7 @@ pub struct MidiConnection {
 }
 
 impl MidiConnection {
-    pub fn new(port: usize) -> Result<MidiConnection, Box<dyn Error>> {
+    pub fn try_new(port: usize) -> Result<MidiConnection, Box<dyn Error>> {
         let mut midi_in = MidiInput::new("rust-synth input")?;
         midi_in.ignore(Ignore::None);
         
@@ -93,14 +93,14 @@ impl MidiConnection {
             &self.port,
             &self.port_name,
             move |micros, raw_message, context| {
-                let message = MidiMessage::new(raw_message);
+                let message = MidiMessage::try_new(raw_message);
                 if DEBUG_MIDI {
                     println!("=============================\n");
                     println!("Microseconds: {}\n", micros);
                     println!("Raw Message: {:?}\n", raw_message);
                     println!("Message: {:#?}\n", message);
                 }
-                match MidiMessage::new(raw_message) {
+                match MidiMessage::try_new(raw_message) {
                     Err(err) => eprintln!("{}", err),
                     Ok(message) => callback(message, context)
                 }

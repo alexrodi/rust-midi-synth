@@ -1,11 +1,12 @@
 use std::error::Error;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::Arc;
 use priomutex::spin_one::Mutex;
 mod synth;
 use synth::Synth;
 mod midi;
 use midi::{MidiConnection, MidiMessage};
+mod audio;
+use audio::Stream;
 
 fn main() {
     match run() {
@@ -16,41 +17,29 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn Error>> {
 
-    //=======
-    // AUDIO
-    //=======
+    // Audio
+    //=======================================================
 
-    let host = cpal::default_host();
+    let mut stream = Stream::try_new()?;
 
-    let device = host
-        .default_output_device()
-        .ok_or("failed to find a default output device")?;
-    let config = device.default_output_config()?;
-
-    let sample_rate = config.sample_rate().0;
-    let channels = config.channels() as usize;
-
+    let sample_rate = stream.sample_rate();
+    let channels = stream.channels();
     let synth = Arc::new(Mutex::new(Synth::new(sample_rate)));
 
     let synth_clone = Arc::clone(&synth);
-
-    let stream = device.build_output_stream(
-        &cpal::StreamConfig::from(config),
-        move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+    stream.output_stream(
+        move |buffer: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let mut synth = synth_clone.lock(0).unwrap(); // Lock mutex with highest priority
-            synth.process(channels, data);
-        },
-        |err| eprintln!("an error occurred on stream: {}", err),
+            synth.process(channels, buffer);
+        }
     )?;
-    stream.play()?;
 
-    //=======
     // MIDI
-    //=======
+    //=======================================================
 
-    let mut midi_connection = MidiConnection::new(0)?;
+    let mut midi_connection = MidiConnection::try_new(0)?;
 
-    midi_connection.connect(
+    let _connection = midi_connection.connect(
         |message, context| {
             match message {
                 MidiMessage::NoteOn(note) => {
@@ -58,17 +47,34 @@ fn run() -> Result<(), Box<dyn Error>> {
                     context.frequency(note.frequency());
                     context.gain(note.gain());
                 },
-                message => println!("Were're still working on {}!", remove_debug_content(format!("{:?}", message)))
+                message => println!("Were're still working on {}!", debug_struct_name(format!("{:?}", message)))
             }
         },
         Arc::clone(&synth)
     )?;
+
+    // Thread
+    //=======================================================
     
     std::thread::park();
     Ok(())
 }
 
-fn remove_debug_content(mut string: String) -> String {
+/// A little utility for retaining the struct name from a debug format
+/// # Usage
+/// ```
+/// #[derive(Debug)]
+/// struct AGreatTuple(f32);
+/// #[derive(Debug)]
+/// struct AnAwesomeStruct{ v: f32 };
+/// 
+/// let a = AGreatTuple(0.0);
+/// let b = AnAwesomeStruct{ v: 0.0 };
+/// 
+/// debug_struct_name(format!("{:?}", a)); // = "AGreatTuple"
+/// debug_struct_name(format!("{:?}", b)); // = "AnAwesomeStruct"
+/// ```
+fn debug_struct_name(mut string: String) -> String {
     let mut found_bracket = false;
     string.retain(|c| 
         !found_bracket && {
