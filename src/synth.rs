@@ -1,22 +1,28 @@
+pub mod envelope;
+use envelope::Envelope;
+
 #[derive(Debug)]
 pub struct Synth {
     frequency: f32,
     gain: f32,
     phase: f32,
     increment: f32,
-    sample_rate: u32
+    sample_rate: u32,
+    envelope: Envelope
 }
 
 impl Synth {
     pub fn new(sample_rate: u32) -> Self {
         let frequency = 440.0;
         let increment = std::f32::consts::TAU / (sample_rate as f32 / frequency);
+        let envelope = Envelope::new(sample_rate, envelope::Adsr::default());
         Self {
             frequency,
             gain: 1.0,
             phase: 0.0,
             increment,
-            sample_rate
+            sample_rate,
+            envelope
         }
     }
 
@@ -35,10 +41,15 @@ impl Synth {
             for sample in frame { *sample = next_sample };
             self.advance();
         }
+        self.envelope.process_apply(buffer);
     }
 
     fn advance(&mut self) {
         self.phase += self.increment;
         self.phase %= std::f32::consts::TAU;
+    }
+
+    pub fn message_envelope(&mut self, message: envelope::Message) {
+        self.envelope.message(message);
     }
 }

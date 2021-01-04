@@ -26,10 +26,10 @@ fn run() -> Result<(), Box<dyn Error>> {
     let channels = stream.channels();
     let synth = Arc::new(Mutex::new(Synth::new(sample_rate)));
 
-    let synth_clone = Arc::clone(&synth);
+    let synth_ref = Arc::clone(&synth);
     stream.output_stream(
         move |buffer: &mut [f32], _: &cpal::OutputCallbackInfo| {
-            let mut synth = synth_clone.lock(0).unwrap(); // Lock mutex with highest priority
+            let mut synth = synth_ref.lock(0).unwrap(); // Lock mutex with highest priority
             synth.process(channels, buffer);
         }
     )?;
@@ -45,8 +45,14 @@ fn run() -> Result<(), Box<dyn Error>> {
                 MidiMessage::NoteOn(note) => {
                     let mut context = context.lock(1).unwrap(); // Lock mutex with reduced priority
                     context.frequency(note.frequency());
-                    context.gain(note.gain());
+                    context.message_envelope(
+                        synth::envelope::Message::On{ velocity: note.gain() }
+                    );
                 },
+                MidiMessage::NoteOff(_note) => {
+                    let mut context = context.lock(1).unwrap(); // Lock mutex with reduced priority
+                    context.message_envelope(synth::envelope::Message::Off);
+                }
                 message => println!("Were're still working on {}!", debug_struct_name(format!("{:?}", message)))
             }
         },
