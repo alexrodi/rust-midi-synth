@@ -30,17 +30,29 @@ pub enum MidiMessage {
     PitchBend(u8, u16),
 }
 
+const NOTE_OFF: u8 = 0b1000;
+const NOTE_ON: u8 = 0b1001;
+const _POLYPHONIC_AFTER_TOUCH: u8 = 0b1010;
+const CONTROL_CHANGE: u8 = 0b1011;
+const PROGRAM_CHANGE: u8 = 0b1100;
+const _AFTER_TOUCH: u8 = 0b1101;
+const PITCH_BEND_CHANGE: u8 = 0b1110;
+
+fn split_status_and_channel(status_byte: u8) -> (u8, u8) {
+    let channel = status_byte & 0b00001111;
+    let status = status_byte >> 4;
+    (status, channel)
+}
+
 impl MidiMessage {
     pub fn try_new(raw_message: &[u8]) -> Result<Self, &str> {
-        let channel = raw_message[0] & 0b00001111;
-        let status = raw_message[0] >> 4;
-
         use MidiMessage::*;
+        let (status, channel) = split_status_and_channel(raw_message[0]);
 
         match status {
-            0b1000 => Ok(NoteOff(Note(channel, raw_message[1], raw_message[2]))),
-            0b1001 => Ok(NoteOn(Note(channel, raw_message[1], raw_message[2]))),
-            0b1011 => {
+            NOTE_OFF => Ok(NoteOff(Note(channel, raw_message[1], raw_message[2]))),
+            NOTE_ON => Ok(NoteOn(Note(channel, raw_message[1], raw_message[2]))),
+            CONTROL_CHANGE => {
                 use self::ControlChange::*;
                 let cc_number = raw_message[1];
                 Ok(ControlChange(if cc_number <= 119 {
@@ -49,13 +61,13 @@ impl MidiMessage {
                     ChannelMode(channel, raw_message[1], raw_message[2])
                 }))
             }
-            0b1110 => {
+            PITCH_BEND_CHANGE => {
                 let msb = (raw_message[2] as u16) << 7;
                 let lsb = raw_message[1] as u16;
                 let pitchbend_value = msb | lsb;
                 Ok(PitchBend(channel, pitchbend_value))
             }
-            0b1100 => Ok(ProgramChange(channel, raw_message[1])),
+            PROGRAM_CHANGE => Ok(ProgramChange(channel, raw_message[1])),
             _ => Err("Unrecognized message"),
         }
     }
