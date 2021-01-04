@@ -56,7 +56,7 @@ impl MidiMessage {
                 let msb = ( raw_message[2] as u16 ) << 7;
                 let lsb = raw_message[1] as u16;
                 let pitchbend_value =  msb | lsb;
-                Ok(PitchBend(channel,pitchbend_value))
+                Ok(PitchBend(channel, pitchbend_value))
             }
             0b1100 => Ok(ProgramChange(channel, raw_message[1])),
             _ => Err("Unrecognized message")

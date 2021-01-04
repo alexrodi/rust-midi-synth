@@ -70,6 +70,11 @@ fn run() -> Result<(), Box<dyn Error>> {
                            unimplemented!()
                         }
                     }
+                },
+                MidiMessage::PitchBend(channel, value) => {
+                    access_atomic!(context);
+                    // 0 - 32767 Range
+                    context.pitchbend_cents((value as f32 - 8192.0) * 0.1);
                 }
                 message => println!("Were're still working on {}!", debug_struct_name(format!("{:?}", message)))
             }
