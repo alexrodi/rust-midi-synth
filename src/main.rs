@@ -43,7 +43,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     // MIDI
     //=======================================================
 
-    let mut midi_connection = MidiConnection::try_new(0)?;
+    let mut midi_connection = MidiConnection::try_new()?;
 
     let _connection = midi_connection.connect(
         |message, context| {

@@ -110,7 +110,7 @@ fn port_prompt(ports: &Vec<MidiInputPort>, re_ask: Option<()>) -> usize {
 }
 
 impl MidiConnection {
-    pub fn try_new(port: usize) -> Result<MidiConnection, Box<dyn Error>> {
+    pub fn try_new() -> Result<MidiConnection, Box<dyn Error>> {
         let mut midi_in = MidiInput::new("rust-synth input")?;
         midi_in.ignore(Ignore::None);
 
