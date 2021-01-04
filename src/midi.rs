@@ -15,14 +15,22 @@ impl Note {
         10.0_f32.powf(db / 20.0)
     }
 }
+#[derive(Debug)]
+pub enum ControlChange {
+    Normal(u8, u8, u8),
+    ChannelMode(u8, u8, u8)
+}
 
 #[derive(Debug)]
 pub enum MidiMessage {
     NoteOn(Note),
     NoteOff(Note),
     ProgramChange(u8, u8),
-    ControlChange(u8, u8, u8)
+    ControlChange(ControlChange),
+    PitchBend(u8, u16)
 }
+
+
 
 impl MidiMessage {
     pub fn try_new(raw_message: &[u8]) -> Result<Self, &str> {
@@ -34,7 +42,22 @@ impl MidiMessage {
         match status {
             0b1000 => Ok(NoteOff(Note(channel, raw_message[1], raw_message[2]))),
             0b1001 => Ok(NoteOn(Note(channel, raw_message[1], raw_message[2]))),
-            0b1011 => Ok(ControlChange(channel, raw_message[1], raw_message[2])),
+            0b1011 => {
+                use self::ControlChange::*;
+                let cc_number = raw_message[1];
+                Ok(ControlChange( if cc_number <= 119 {
+                    Normal(channel, raw_message[1], raw_message[2])
+                } else {
+                    ChannelMode(channel, raw_message[1], raw_message[2])
+                }))
+
+            },
+            0b1110 =>  {
+                let msb = ( raw_message[2] as u16 ) << 7;
+                let lsb = raw_message[1] as u16;
+                let pitchbend_value =  msb | lsb;
+                Ok(PitchBend(channel,pitchbend_value))
+            }
             0b1100 => Ok(ProgramChange(channel, raw_message[1])),
             _ => Err("Unrecognized message")
         }

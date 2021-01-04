@@ -4,7 +4,7 @@ use crossbeam::epoch::{Atomic, pin};
 mod synth;
 use synth::Synth;
 mod midi;
-use midi::{MidiConnection, MidiMessage};
+use midi::{MidiConnection, MidiMessage, ControlChange};
 mod audio;
 use audio::Stream;
 
@@ -16,19 +16,12 @@ macro_rules! access_atomic {
     };
 }
 
-
-
 fn main() {
-    // let alex = Atomic::new(34);
-    // access_atomic!(alex);
-    // dbg!(alex);
     match run() {
         Ok(_) => (),
         Err(err) => eprintln!("Error: {}", err)
     }
 }
-
-
 
 fn run() -> Result<(), Box<dyn Error>> {
 
@@ -67,6 +60,16 @@ fn run() -> Result<(), Box<dyn Error>> {
                 MidiMessage::NoteOff(_note) => {
                     access_atomic!(context);
                     context.message_envelope(synth::envelope::Message::Off);
+                },
+                MidiMessage::ControlChange(control_change) => {
+                    match control_change {
+                        ControlChange::Normal(channel, cc_number, value) => {
+                            
+                        },
+                        ControlChange::ChannelMode(channel, cc_number, value) => {
+                           unimplemented!()
+                        }
+                    }
                 }
                 message => println!("Were're still working on {}!", debug_struct_name(format!("{:?}", message)))
             }
@@ -80,6 +83,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     std::thread::park();
     Ok(())
 }
+
 
 /// Small utility for retaining the struct name from a debug format.
 /// - Disposes of all content and brackets or parenthesis
