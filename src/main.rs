@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::sync::Arc;
-use priomutex::spin_one::Mutex;
+use crossbeam::epoch::{Atomic, pin};
 mod synth;
 use synth::Synth;
 mod midi;
@@ -8,29 +8,44 @@ use midi::{MidiConnection, MidiMessage};
 mod audio;
 use audio::Stream;
 
+macro_rules! access_atomic {
+    ($variable_name:ident) => {
+        let guard = &pin();
+        let mut p = $variable_name.load_consume(guard);
+        let $variable_name = unsafe { p.deref_mut() };
+    };
+}
+
+
+
 fn main() {
+    // let alex = Atomic::new(34);
+    // access_atomic!(alex);
+    // dbg!(alex);
     match run() {
         Ok(_) => (),
         Err(err) => eprintln!("Error: {}", err)
     }
 }
 
+
+
 fn run() -> Result<(), Box<dyn Error>> {
 
     // Audio
     //=======================================================
-
+    
     let mut stream = Stream::try_new()?;
 
     let sample_rate = stream.sample_rate();
     let channels = stream.channels();
-    let synth = Arc::new(Mutex::new(Synth::new(sample_rate)));
+    let synth = Arc::new(Atomic::new(Synth::new(sample_rate)));
 
-    let synth_ref = Arc::clone(&synth);
+    let clone = Arc::clone(&synth);
     stream.output_stream(
         move |buffer: &mut [f32], _: &cpal::OutputCallbackInfo| {
-            let mut synth = synth_ref.lock(0).unwrap(); // Lock mutex with highest priority
-            synth.process(channels, buffer);
+            access_atomic!(clone);
+            clone.process(channels, buffer);
         }
     )?;
 
@@ -43,14 +58,14 @@ fn run() -> Result<(), Box<dyn Error>> {
         |message, context| {
             match message {
                 MidiMessage::NoteOn(note) => {
-                    let mut context = context.lock(1).unwrap(); // Lock mutex with reduced priority
+                    access_atomic!(context);
                     context.frequency(note.frequency());
                     context.message_envelope(
                         synth::envelope::Message::On{ velocity: note.gain() }
                     );
                 },
                 MidiMessage::NoteOff(_note) => {
-                    let mut context = context.lock(1).unwrap(); // Lock mutex with reduced priority
+                    access_atomic!(context);
                     context.message_envelope(synth::envelope::Message::Off);
                 }
                 message => println!("Were're still working on {}!", debug_struct_name(format!("{:?}", message)))
