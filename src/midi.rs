@@ -132,7 +132,7 @@ impl MidiConnection {
         let port = ports.get(port).ok_or("port not found")?.clone();
         let port_name = midi_in.port_name(&port)?;
 
-        println!("Selecting: {}", port_name);
+        println!("Selected: {}", port_name);
 
         Ok(MidiConnection {
             port,
