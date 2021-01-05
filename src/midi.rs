@@ -101,7 +101,7 @@ pub struct MidiConnection {
 fn port_prompt(ports: &Vec<MidiInputPort>, re_ask: Option<()>) -> usize {
     let mut choice: usize = 0;
     if let None = re_ask {
-        println!("Please choose your midi input.");
+        println!("Choose your midi input.");
     }
     match read_input().expect("Couldn't read input.").parse::<usize>() {
         Ok(c) => {
