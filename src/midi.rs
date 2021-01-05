@@ -106,7 +106,7 @@ fn port_prompt(ports: &Vec<MidiInputPort>, re_ask: Option<()>) -> usize {
     match read_input().expect("Couldn't read input.").parse::<usize>() {
         Ok(c) => {
             if c < ports.len() {
-                println!("You have chosen {}", c);
+ 
                 choice = c;
             } else {
                 println!("{}: Not a valid port number", c);
