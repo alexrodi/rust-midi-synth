@@ -114,7 +114,7 @@ fn port_prompt(ports: &Vec<MidiInputPort>, re_ask: Option<()>) -> usize {
             }
         }
         Err(_) => {
-            println!("Please enter a number of the port you want to choose instead.");
+            println!("{}: Not a valid port number", c);
             port_prompt(ports, Some(()));
         }
     };
